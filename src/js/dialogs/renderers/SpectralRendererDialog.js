@@ -2,6 +2,7 @@
 
 // #include ../AbstractDialog.js
 // #include ../../TransferFunctionWidget.js
+// #include ../../AbsorptionWidget.js
 
 // #include ../../../uispecs/renderers/SpectralRendererDialog.json
 
@@ -14,6 +15,7 @@ constructor(renderer, options) {
 
     this._handleChange = this._handleChange.bind(this);
     this._handleTFChange = this._handleTFChange.bind(this);
+    this._handleAChange = this._handleAChange.bind(this);
 
     this._binds.extinction.addEventListener('input', this._handleChange);
     this._binds.albedo.addEventListener('change', this._handleChange);
@@ -25,10 +27,15 @@ constructor(renderer, options) {
     this._tfwidget = new TransferFunctionWidget();
     this._binds.tfcontainer.add(this._tfwidget);
     this._tfwidget.addEventListener('change', this._handleTFChange);
+
+    this._awidget = new AbsorptionWidget();
+    this._binds.acontainer.add(this._awidget);
+    this._awidget.addEventListener('change', this._handleAChange);
 }
 
 destroy() {
     this._tfwidget.destroy();
+    this._awidget.destroy();
     super.destroy();
 }
 
@@ -52,6 +59,11 @@ _handleChange() {
 
 _handleTFChange() {
     this._renderer.setTransferFunction(this._tfwidget.getTransferFunction());
+    this._renderer.reset();
+}
+
+_handleAChange() {
+    this._renderer.setAbsorption(this._awidget.getAbsorption());
     this._renderer.reset();
 }
 

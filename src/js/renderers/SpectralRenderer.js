@@ -79,6 +79,8 @@ _integrateFrame() {
     gl.bindTexture(gl.TEXTURE_2D, this._environmentTexture);
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_2D, this._transferFunction);
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this._absorption);
 
     gl.uniform1i(program.uniforms.uPosition, 0);
     gl.uniform1i(program.uniforms.uDirection, 1);
@@ -88,6 +90,7 @@ _integrateFrame() {
     gl.uniform1i(program.uniforms.uVolume, 4);
     gl.uniform1i(program.uniforms.uEnvironment, 5);
     gl.uniform1i(program.uniforms.uTransferFunction, 6);
+    gl.uniform1i(program.uniforms.uAbsorption, 6);
 
     gl.uniformMatrix4fv(program.uniforms.uMvpInverseMatrix, false, this._mvpInverseMatrix.m);
     gl.uniform2f(program.uniforms.uInverseResolution, 1 / this._bufferSize, 1 / this._bufferSize);

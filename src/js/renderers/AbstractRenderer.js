@@ -28,6 +28,15 @@ constructor(gl, volume, environmentTexture, options) {
         mag    : gl.LINEAR
     });
 
+    this._absorption = WebGL.createTexture(gl, {
+        width  : 2,
+        height : 1,
+        data   : new Uint8Array([255, 0, 0, 0, 255, 0, 0, 255]),
+        wrapS  : gl.CLAMP_TO_EDGE,
+        wrapT  : gl.CLAMP_TO_EDGE,
+        min    : gl.LINEAR,
+        mag    : gl.LINEAR
+    });
     this._mvpInverseMatrix = new Matrix();
 
     this._clipQuad = WebGL.createClipQuad(gl);
@@ -42,6 +51,7 @@ destroy() {
     this._accumulationBuffer.destroy();
     this._renderBuffer.destroy();
     gl.deleteTexture(this._transferFunction);
+    gl.deleteTexture(this._absorption);
     gl.deleteBuffer(this._clipQuad);
     gl.deleteProgram(this._clipQuadProgram.program);
 }
@@ -102,6 +112,14 @@ setTransferFunction(transferFunction) {
     gl.bindTexture(gl.TEXTURE_2D, this._transferFunction);
     gl.texImage2D(gl.TEXTURE_2D, 0,
         gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, transferFunction);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+setAbsorption(absorption) {
+    const gl = this._gl;
+    gl.bindTexture(gl.TEXTURE_2D, this._absorption);
+    gl.texImage2D(gl.TEXTURE_2D, 0,
+        gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, absorption);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 

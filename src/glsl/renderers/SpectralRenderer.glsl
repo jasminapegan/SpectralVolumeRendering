@@ -44,6 +44,7 @@ uniform mediump sampler2D uRadiance;
 
 uniform mediump sampler3D uVolume;
 uniform mediump sampler2D uTransferFunction;
+uniform mediump sampler2D uAbsorption;
 uniform mediump sampler2D uEnvironment;
 
 uniform mat4 uMvpInverseMatrix;
@@ -64,11 +65,12 @@ layout (location = 0) out vec4 oPosition;
 layout (location = 1) out vec4 oDirection;
 layout (location = 2) out vec4 oTransmittance;
 layout (location = 3) out vec4 oRadiance;
-layout (location = 4) out float oFrequency;
 
 @rand
+@unprojectRand
+@intersectCube
 
-/*float sampleFrequency(vec2 randState) {
+float sampleFrequency(vec2 randState) {
     float[] spectrum = float[8](2.7, 3.3, 2.6, 2.5, 2.3, 2.1, 2.0, 1.75);
     const int len = 8;
 
@@ -76,7 +78,7 @@ layout (location = 4) out float oFrequency;
     for (int i=0; i < len; i++) {
         sum += spectrum[i];
     }
-    float[] cumulativeSpectrum = float[len]();
+    float[] cumulativeSpectrum = float[len](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     cumulativeSpectrum[0] = spectrum[0] / sum;
     for (int i=1; i < len; i++) {
         cumulativeSpectrum[i] = (cumulativeSpectrum[i-1] + spectrum[i]) / sum;
@@ -87,41 +89,39 @@ layout (location = 4) out float oFrequency;
     while (cumulativeSpectrum[i] > u) {
         i++;
     }
-    return 4.0 + float(i * (4/len)); // return actual freq between 4 and 7.5
-}*/
+    return 4.0 + float(4 * i) / float(len); // return actual freq between 4 and 7.5
+}
 
-/**
- * Taken from Earl F. Glynn's web page:
- * <a href="http://www.efg2.com/Lab/ScienceAndEngineering/Spectra.htm">Spectra Lab Report</a>
- */
-/*
-int[] waveLengthToRGB(float Wavelength) {
+//Taken from Earl F. Glynn's web page:
+// <a href="http://www.efg2.com/Lab/ScienceAndEngineering/Spectra.htm">Spectra Lab Report</a>
+vec3 frequencyToRGB(float freq) {
+    float Wavelength = 299792458.0 / freq;
     float Gamma = 0.80;
-    float IntensityMax = 255;
-    double factor;
-    double Red, Green, Blue;
+    float IntensityMax = 255.0;
+    float factor;
+    float Red, Green, Blue;
 
-    if((Wavelength >= 380) && (Wavelength < 440)) {
-        Red = -(Wavelength - 440) / (440 - 380);
+    if((Wavelength >= 380.0) && (Wavelength < 440.0)) {
+        Red = -(Wavelength - 440.0) / (440.0 - 380.0);
         Green = 0.0;
         Blue = 1.0;
-    } else if((Wavelength >= 440) && (Wavelength < 490)) {
+    } else if((Wavelength >= 440.0) && (Wavelength < 490.0)) {
         Red = 0.0;
-        Green = (Wavelength - 440) / (490 - 440);
+        Green = (Wavelength - 440.0) / (490.0 - 440.0);
         Blue = 1.0;
-    } else if((Wavelength >= 490) && (Wavelength < 510)) {
+    } else if((Wavelength >= 490.0) && (Wavelength < 510.0)) {
         Red = 0.0;
         Green = 1.0;
-        Blue = -(Wavelength - 510) / (510 - 490);
-    } else if((Wavelength >= 510) && (Wavelength < 580)) {
-        Red = (Wavelength - 510) / (580 - 510);
+        Blue = -(Wavelength - 510.0) / (510.0 - 490.0);
+    } else if((Wavelength >= 510.0) && (Wavelength < 580.0)) {
+        Red = (Wavelength - 510.0) / (580.0 - 510.0);
         Green = 1.0;
         Blue = 0.0;
-    } else if((Wavelength >= 580) && (Wavelength < 645)) {
+    } else if((Wavelength >= 580.0) && (Wavelength < 645.0)) {
         Red = 1.0;
-        Green = -(Wavelength - 645) / (645 - 580);
+        Green = -(Wavelength - 645.0) / (645.0 - 580.0);
         Blue = 0.0;
-    } else if((Wavelength >= 645) && (Wavelength < 781)) {
+    } else if((Wavelength >= 645.0) && (Wavelength < 781.0)) {
         Red = 1.0;
         Green = 0.0;
         Blue = 0.0;
@@ -131,38 +131,25 @@ int[] waveLengthToRGB(float Wavelength) {
         Blue = 0.0;
     }
 
-    // Let the intensity fall off near the vision limits
-    if((Wavelength >= 380) && (Wavelength < 420)) {
-        factor = 0.3 + 0.7 * (Wavelength - 380) / (420 - 380);
-    } else if((Wavelength >= 420) && (Wavelength < 701)) {
+    // Let the intensity fall off near the vision limits; this is line 155
+    if((Wavelength >= 380.0) && (Wavelength < 420.0)) {
+        factor = 0.3 + 0.7 * (Wavelength - 380.0) / (420.0 - 380.0);
+    } else if((Wavelength >= 420.0) && (Wavelength < 701.0)) {
         factor = 1.0;
-    } else if((Wavelength >= 701) && (Wavelength < 781)) {
-        factor = 0.3 + 0.7 * (780 - Wavelength) / (780 - 700);
+    } else if((Wavelength >= 701.0) && (Wavelength < 781.0)) {
+        factor = 0.3 + 0.7 * (780.0 - Wavelength) / (780.0 - 700.0);
     } else {
         factor = 0.0;
     }
 
-    int[] rgb = int[3]();
-
     // Don't want 0^x = 1 for x <> 0
-    rgb[0] = Red == 0.0 ? 0 : round(IntensityMax * Math.pow(Red * factor, Gamma));
-    rgb[1] = Green == 0.0 ? 0 : round(IntensityMax * Math.pow(Green * factor, Gamma));
-    rgb[2] = Blue == 0.0 ? 0 : round(IntensityMax * Math.pow(Blue * factor, Gamma));
+    int r = Red == 0.0 ? 0 : int(round(IntensityMax * pow(Red * factor, Gamma)));
+    int g = Green == 0.0 ? 0 : int(round(IntensityMax * pow(Green * factor, Gamma)));
+    int b = Blue == 0.0 ? 0 : int(round(IntensityMax * pow(Blue * factor, Gamma)));
 
-    return rgb;
+    return vec3(r, g, b);
 }
 
-
-int[] frequencyToRGB(float frequency) {
-    float c = 299792458; // m/s
-    float lambda = c / frequency;
-    return waveLengthToRGB(lambda);
-}
-*/
-
-
-@unprojectRand
-@intersectCube
 
 void resetPhoton(inout vec2 randState, inout SpectralPhoton photon) {
     vec3 from, to;
@@ -172,7 +159,7 @@ void resetPhoton(inout vec2 randState, inout SpectralPhoton photon) {
     vec2 tbounds = max(intersectCube(from, photon.direction), 0.0);
     photon.position = from + tbounds.x * photon.direction;
     photon.transmittance = vec3(1);
-    //photon.frequency = sampleFrequency(randState);  // get random from spectrum
+    photon.frequency = sampleFrequency(randState);  // get random from spectrum
 }
 
 vec4 sampleEnvironmentMap(vec3 d) {
@@ -184,6 +171,12 @@ vec4 sampleVolumeColor(vec3 position) {    // nekje tle dodaj kolicnik za lom
     vec2 volumeSample = texture(uVolume, position).rg;
     vec4 transferSample = texture(uTransferFunction, volumeSample);
     return transferSample;
+}
+
+vec4 sampleAbsorptionColor(vec3 position) {    // nekje tle dodaj kolicnik za lom
+    vec2 volumeSample = texture(uVolume, position).rg;
+    vec4 absorptionSample = texture(uAbsorption, volumeSample);
+    return absorptionSample;
 }
 
 vec3 randomDirection(vec2 U) {
@@ -257,7 +250,7 @@ void main() {
             r = rand(r);
             float weightS = muScattering / (uMajorant * PScattering);
             photon.transmittance *= volumeSample.rgb * weightS;
-            photon.direction = sampleHenyeyGreenstein(uScatteringBias, r, photon.direction);  // tle izračunaš iz okolice in kolicnikov loma
+            photon.direction = sampleHenyeyGreenstein(uScatteringBias, r, photon.direction);
             photon.bounces++;
         } else {
             // null collision
@@ -346,7 +339,6 @@ void main() {
     photon.radiance = vec3(1);
     photon.bounces = 0u;
     photon.samples = 0u;
-    photon.frequency = 0;
     oPosition = vec4(photon.position, 0);
     oDirection = vec4(photon.direction, float(photon.bounces));
     oTransmittance = vec4(photon.transmittance, 0);

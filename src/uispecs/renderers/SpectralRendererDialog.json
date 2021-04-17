@@ -94,6 +94,16 @@
           "bind": "tfcontainer"
         }
       ]
+    },
+    {
+      "type": "accordion",
+      "label": "Absorption",
+      "children": [
+        {
+          "type": "panel",
+          "bind": "acontainer"
+        }
+      ]
     }
   ]
 }
