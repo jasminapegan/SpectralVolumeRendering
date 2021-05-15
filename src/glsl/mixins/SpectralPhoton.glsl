@@ -10,4 +10,5 @@ struct SpectralPhoton {
     uint bounces;
     uint samples;
     float frequency;  // 4.3-7.5
+    float spectrum[8];
 };

@@ -79,6 +79,8 @@ _integrateFrame() {
     gl.bindTexture(gl.TEXTURE_2D, this._environmentTexture);
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_2D, this._transferFunction);
+    gl.activeTexture(gl.TEXTURE7);
+    gl.bindTexture(gl.TEXTURE_2D, this._absorption);
 
     gl.uniform1i(program.uniforms.uPosition, 0);
     gl.uniform1i(program.uniforms.uDirection, 1);

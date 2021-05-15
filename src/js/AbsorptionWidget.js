@@ -19,8 +19,8 @@ constructor(options) {
     Object.assign(this, {
         _width                  : 256,
         _height                 : 256,
-        _absorptionWidth  : 256,
-        _absorptionHeight : 256,
+        _absorptionWidth        : 256,
+        _absorptionHeight       : 256,
         scaleSpeed              : 0.003
     }, options);
 
@@ -164,7 +164,7 @@ _addHandle(index) {
         const i = parseInt(DOMUtils.data(e.currentTarget, 'index'));
         this.selectBump(i);
     });
-    $handle.addEventListener('mousewheel', e => {
+    $handle.addEventListener('wheel', e => {
         const amount = e.deltaY * this.scaleSpeed;
         const scale = Math.exp(-amount);
         const i = parseInt(DOMUtils.data(e.currentTarget, 'index'));

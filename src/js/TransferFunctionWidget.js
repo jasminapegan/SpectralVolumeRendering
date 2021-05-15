@@ -164,7 +164,7 @@ _addHandle(index) {
         const i = parseInt(DOMUtils.data(e.currentTarget, 'index'));
         this.selectBump(i);
     });
-    $handle.addEventListener('mousewheel', e => {
+    $handle.addEventListener('wheel', e => {
         const amount = e.deltaY * this.scaleSpeed;
         const scale = Math.exp(-amount);
         const i = parseInt(DOMUtils.data(e.currentTarget, 'index'));

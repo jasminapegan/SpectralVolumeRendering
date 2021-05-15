@@ -2,6 +2,7 @@
 
 // #include ../WebGL.js
 // #include AbstractRenderer.js
+// #include ../utils/SpectralUtils.js
 
 class SpectralRenderer extends AbstractRenderer {
 
@@ -44,6 +45,9 @@ _resetFrame() {
     gl.uniform2f(program.uniforms.uInverseResolution, 1 / this._bufferSize, 1 / this._bufferSize);
     gl.uniform1f(program.uniforms.uRandSeed, Math.random());
     gl.uniform1f(program.uniforms.uBlur, 0);
+    gl.uniform1f(program.uniforms.uPhotonFreq, SpectralUtils.sampleFrequency());
+    gl.uniformMatrix4fv(program.uniforms.uSpectrum, false, [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], 
+                                                            [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]);
 
     gl.drawBuffers([
         gl.COLOR_ATTACHMENT0,
@@ -79,7 +83,7 @@ _integrateFrame() {
     gl.bindTexture(gl.TEXTURE_2D, this._environmentTexture);
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_2D, this._transferFunction);
-    gl.activeTexture(gl.TEXTURE6);
+    gl.activeTexture(gl.TEXTURE7);
     gl.bindTexture(gl.TEXTURE_2D, this._absorption);
 
     gl.uniform1i(program.uniforms.uPosition, 0);
@@ -90,7 +94,7 @@ _integrateFrame() {
     gl.uniform1i(program.uniforms.uVolume, 4);
     gl.uniform1i(program.uniforms.uEnvironment, 5);
     gl.uniform1i(program.uniforms.uTransferFunction, 6);
-    gl.uniform1i(program.uniforms.uAbsorption, 6);
+    gl.uniform1i(program.uniforms.uAbsorption, 7);
 
     gl.uniformMatrix4fv(program.uniforms.uMvpInverseMatrix, false, this._mvpInverseMatrix.m);
     gl.uniform2f(program.uniforms.uInverseResolution, 1 / this._bufferSize, 1 / this._bufferSize);
@@ -103,6 +107,11 @@ _integrateFrame() {
     gl.uniform1f(program.uniforms.uMajorant, this.majorant);
     gl.uniform1ui(program.uniforms.uMaxBounces, this.maxBounces);
     gl.uniform1ui(program.uniforms.uSteps, this.steps);
+
+    gl.uniform1f(program.uniforms.uPhotonFreq, SpectralUtils.sampleFrequency());
+    gl.uniformMatrix4fv(program.uniforms.uSpectrum, false, [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], 
+                                                            [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]);
+
 
     gl.drawBuffers([
         gl.COLOR_ATTACHMENT0,
