@@ -174,7 +174,7 @@ _getDialogForRenderer(renderer) {
         case 'mcs' : return MCSRendererDialog;
         case 'mcm' : return MCMRendererDialog;
         case 'mcc' : return MCMRendererDialog; // yes, the same
-        case 'spc' : return SpectralRendererDialog; // yes, the same
+        case 'spc' : return SpectralRendererDialog;
     }
 }
 

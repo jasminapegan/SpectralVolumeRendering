@@ -1,3 +1,1 @@
-node bin/packer
-
-node bin/server-node
+node bin/packer && node bin/server-node

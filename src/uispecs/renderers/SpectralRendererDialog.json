@@ -86,6 +86,32 @@
       ]
     },
     {
+      "type": "field",
+      "label": "n:",
+      "children": [
+        {
+          "type": "spinner",
+          "bind": "n",
+          "value": 16,
+          "min": 8,
+          "step": 4
+        }
+      ]
+    },
+    {
+      "type": "field",
+      "label": "temperature [K]:",
+      "children": [
+        {
+          "type": "spinner",
+          "bind": "temperature",
+          "value": 5000,
+          "min": 1,
+          "step": 1
+        }
+      ]
+    },
+    {
       "type": "accordion",
       "label": "Transfer function",
       "children": [

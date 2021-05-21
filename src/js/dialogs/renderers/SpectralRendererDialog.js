@@ -23,6 +23,8 @@ constructor(renderer, options) {
     this._binds.ratio.addEventListener('change', this._handleChange);
     this._binds.bounces.addEventListener('input', this._handleChange);
     this._binds.steps.addEventListener('input', this._handleChange);
+    this._binds.n.addEventListener('input', this._handleChange);
+    this._binds.temperature.addEventListener('input', this._handleChange);
 
     this._tfwidget = new TransferFunctionWidget();
     this._binds.tfcontainer.add(this._tfwidget);
@@ -46,6 +48,8 @@ _handleChange() {
     const ratio      = this._binds.ratio.getValue();
     const bounces    = this._binds.bounces.getValue();
     const steps      = this._binds.steps.getValue();
+    const n          = this._binds.n.getValue();
+    const temperature = this._binds.temperature.getValue();
 
     this._renderer.absorptionCoefficient = extinction * (1 - albedo);
     this._renderer.scatteringCoefficient = extinction * albedo;
@@ -53,6 +57,8 @@ _handleChange() {
     this._renderer.majorant = extinction * ratio;
     this._renderer.maxBounces = bounces;
     this._renderer.steps = steps;
+    this._renderer.n = n;
+    this._renderer.temperature = temperature;
 
     this._renderer.reset();
 }

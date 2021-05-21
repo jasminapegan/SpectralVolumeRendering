@@ -59,8 +59,9 @@ uniform float uScatteringBias;
 uniform float uMajorant;
 uniform uint uMaxBounces;
 uniform uint uSteps;
-uniform float uPhotonFreq;
-uniform uint uIdx;
+
+//uniform float uPhotonFreq;
+//uniform mat4 uSpectrum;
 
 in vec2 vPosition;
 
@@ -81,61 +82,11 @@ void resetPhoton(inout vec2 randState, inout SpectralPhoton photon) {
     photon.bounces = 0u;
     vec2 tbounds = max(intersectCube(from, photon.direction), 0.0);
     photon.position = from + tbounds.x * photon.direction;
-    
-    float Wavelength = 299792458.0 / photon.frequency;
-    float Gamma = 0.80;
-    float IntensityMax = 255.0;
-    float factor;
-    float Red, Green, Blue;
-
-    if((Wavelength >= 380.0) && (Wavelength < 440.0)) {
-        Red = -(Wavelength - 440.0) / (440.0 - 380.0);
-        Green = 0.0;
-        Blue = 1.0;
-    } else if((Wavelength >= 440.0) && (Wavelength < 490.0)) {
-        Red = 0.0;
-        Green = (Wavelength - 440.0) / (490.0 - 440.0);
-        Blue = 1.0;
-    } else if((Wavelength >= 490.0) && (Wavelength < 510.0)) {
-        Red = 0.0;
-        Green = 1.0;
-        Blue = -(Wavelength - 510.0) / (510.0 - 490.0);
-    } else if((Wavelength >= 510.0) && (Wavelength < 580.0)) {
-        Red = (Wavelength - 510.0) / (580.0 - 510.0);
-        Green = 1.0;
-        Blue = 0.0;
-    } else if((Wavelength >= 580.0) && (Wavelength < 645.0)) {
-        Red = 1.0;
-        Green = -(Wavelength - 645.0) / (645.0 - 580.0);
-        Blue = 0.0;
-    } else if((Wavelength >= 645.0) && (Wavelength < 781.0)) {
-        Red = 1.0;
-        Green = 0.0;
-        Blue = 0.0;
-    } else {
-        Red = 0.0;
-        Green = 0.0;
-        Blue = 0.0;
-    }
-
-    // Let the intensity fall off near the vision limits; this is line 155
-    if((Wavelength >= 380.0) && (Wavelength < 420.0)) {
-        factor = 0.3 + 0.7 * (Wavelength - 380.0) / (420.0 - 380.0);
-    } else if((Wavelength >= 420.0) && (Wavelength < 701.0)) {
-        factor = 1.0;
-    } else if((Wavelength >= 701.0) && (Wavelength < 781.0)) {
-        factor = 0.3 + 0.7 * (780.0 - Wavelength) / (780.0 - 700.0);
-    } else {
-        factor = 0.0;
-    }
-
-    // Don't want 0^x = 1 for x <> 0
-    int r = Red == 0.0 ? 0 : int(round(IntensityMax * pow(Red * factor, Gamma)));
-    int g = Green == 0.0 ? 0 : int(round(IntensityMax * pow(Green * factor, Gamma)));
-    int b = Blue == 0.0 ? 0 : int(round(IntensityMax * pow(Blue * factor, Gamma)));
-
-    photon.transmittance = vec3(1); //vec3(r, g, b);
-    photon.frequency = uPhotonFreq;
+    photon.transmittance = vec3(1);
+    photon.frequency = 0.0; //uPhotonFreq; //sampleFrequency(randState);  // get random from spectrum
+    photon.spectrum = float[8](200.0, 200.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0); 
+    /*uSpectrum[0][0], uSpectrum[0][1], uSpectrum[0][2], uSpectrum[0][3],
+                                uSpectrum[1][0], uSpectrum[1][1], uSpectrum[1][2], uSpectrum[1][3]);*/
 }
 
 vec4 sampleEnvironmentMap(vec3 d) {
@@ -143,7 +94,7 @@ vec4 sampleEnvironmentMap(vec3 d) {
     return texture(uEnvironment, texCoord);
 }
 
-vec4 sampleVolumeColor(vec3 position) {
+vec4 sampleVolumeColor(vec3 position) {    // nekje tle dodaj kolicnik za lom
     vec2 volumeSample = texture(uVolume, position).rg;
     vec4 transferSample = texture(uTransferFunction, volumeSample);
     return transferSample;
@@ -181,17 +132,18 @@ vec3 sampleHenyeyGreenstein(float g, vec2 U, vec3 direction) {
 
 void main() {
     SpectralPhoton photon;
-    photon.frequency = uPhotonFreq;
     vec2 mappedPosition = vPosition * 0.5 + 0.5;
     photon.position = texture(uPosition, mappedPosition).xyz;
     vec4 directionAndBounces = texture(uDirection, mappedPosition);
     photon.direction = directionAndBounces.xyz;
     photon.bounces = uint(directionAndBounces.w + 0.5);
     photon.transmittance = texture(uTransmittance, mappedPosition).rgb;
-    //photon.transmittance = limitFreq(photon.frequency, photon.transmittance);
     vec4 radianceAndSamples = texture(uRadiance, mappedPosition);
     photon.radiance = radianceAndSamples.rgb;
     photon.samples = uint(radianceAndSamples.w + 0.5);
+    photon.spectrum =  float[8](200.0, 200.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0); 
+    /*float[8](uSpectrum[0][0], uSpectrum[0][1], uSpectrum[0][2], uSpectrum[0][3],
+                                uSpectrum[1][0], uSpectrum[1][1], uSpectrum[1][2], uSpectrum[1][3]);*/
 
     vec2 r = rand(vPosition * uRandSeed);
     for (uint i = 0u; i < uSteps; i++) {
@@ -201,10 +153,9 @@ void main() {
         photon.position += dx;
 
         vec4 volumeSample = sampleVolumeColor(photon.position);
-        float density = texture(uVolume, photon.position).r;
         vec4 absorptionSample = sampleAbsorptionColor(photon.position);
-        float muAbsorption = density * absorptionSample.w;
-        float muScattering = density * uScatteringCoefficient; //volumeSample.a * uScatteringCoefficient;
+        float muAbsorption = volumeSample.a * uAbsorptionCoefficient;
+        float muScattering = volumeSample.a * uScatteringCoefficient;
         float muNull = uMajorant - muAbsorption - muScattering;
         float muMajorant = muAbsorption + muScattering + abs(muNull);
         float PNull = abs(muNull) / muMajorant;
@@ -216,50 +167,65 @@ void main() {
             // out of bounds
             vec4 envSample = sampleEnvironmentMap(photon.direction);
             vec3 radiance = photon.transmittance * envSample.rgb;
-            photon.samples++;
             photon.radiance += (radiance - photon.radiance) / float(photon.samples);
+            photon.samples++;
             resetPhoton(r, photon);
+
         } else if (photon.bounces >= uMaxBounces) {
             // max bounces achieved -> only estimate transmittance
             float weightAS = (muAbsorption + muScattering) / uMajorant;
             photon.transmittance *= 1.0 - weightAS;
-        }
-        else if (idx == uIdx) {//r.y < PAbsorption) {
+            // spectrum -- update
+            //photon.spectrum[idx] *= 1.0 - length(dx) * volumeSample.x;  // assuming only this band is absorbed
+
+        } else if (r.y < PAbsorption) {
             // absorption
-            //float weightA = muAbsorption / (uMajorant * PAbsorption);
-            //photon.transmittance *= 1.0 - weightA;
-            // if photon is in the same spectral band as absorbed color, execute absorption
-            float factor = 1.0 - float(length(dx)) * muAbsorption;
-            photon.transmittance *= volumeSample.rgb * factor;
-        }
-        else if (r.y < PAbsorption + PScattering) {
+            float weightA = muAbsorption / (uMajorant * PAbsorption);
+            photon.transmittance *= 1.0 - weightA;
+            // spectrum -- update
+            //photon.spectrum[idx] *= 1.0 - length(dx) * volumeSample.x;  // assuming only this band is absorbed
+
+        } else if (r.y < PAbsorption + PScattering) {
             // scattering
-            if (uIdx != idx) {
-                r = rand(r);
-                float weightS = muScattering / (uMajorant * PScattering);
-                //photon.transmittance *= volumeSample.rgb * weightS;
-                vec3 factor = vec3(1) - float(length(dx)) * muAbsorption * absorptionSample.rgb;
-                photon.transmittance *= volumeSample.rgb * factor;
-                /*if (uIdx != idx) {
-                    photon.transmittance *= volumeSample.a * absorptionSample.w;
-                } else {
-                    photon.transmittance *= factor;
-                    //photon.transmittance = cropColor(photon.transmittance, absorptionSample.rgb, factor);
-                }*/
-                photon.direction = sampleHenyeyGreenstein(uScatteringBias, r, photon.direction);
-                photon.bounces++;
-            }
-        }
-        else {
+            r = rand(r);
+            float weightS = muScattering / (uMajorant * PScattering);
+            photon.transmittance *= volumeSample.rgb * weightS;
+            photon.direction = sampleHenyeyGreenstein(uScatteringBias, r, photon.direction);
+            photon.bounces++;
+            // spectrum -- update
+            //float s = photon.spectrum[idx] * (1.0 - float(length(dx)) * volumeSample.x);
+            //photon.spectrum[idx] = s; //*= 1.0 - float(length(dx)) * volumeSample.x;  // assuming only this band is absorbed
+
+        } else {
             // null collision
             float weightN = muNull / (uMajorant * PNull);
             photon.transmittance *= weightN;
         }
-    }
+        if (idx == 0u)
+            photon.spectrum[0u] *= 1.0 - float(length(dx)) * volumeSample.x; 
+        if (idx == 1u)
+            photon.spectrum[1u] *= 1.0 - float(length(dx)) * volumeSample.x; 
+        if (idx == 2u)
+            photon.spectrum[2u] *= 1.0 - float(length(dx)) * volumeSample.x; 
+        if (idx == 3u)
+            photon.spectrum[3u] *= 1.0 - float(length(dx)) * volumeSample.x; 
+        if (idx == 4u)
+            photon.spectrum[4u] *= 1.0 - float(length(dx)) * volumeSample.x; 
+        if (idx == 5u)
+            photon.spectrum[5u] *= 1.0 - float(length(dx)) * volumeSample.x; 
+        if (idx == 6u)
+            photon.spectrum[6u] *= 1.0 - float(length(dx)) * volumeSample.x; 
+        if (idx == 7u)
+            photon.spectrum[7u] *= 1.0 - float(length(dx)) * volumeSample.x; 
 
+    }
     oPosition = vec4(photon.position, 0);
     oDirection = vec4(photon.direction, float(photon.bounces));
-    oTransmittance = vec4(photon.transmittance, 0);
+    oTransmittance = vec4(photon.transmittance, 0); // color actually
+    //oTransmittance = vec4(spectrumToRgb(photon.spectrum), 0);
+    /*vec4(photon.spectrum[0], photon.spectrum[1], photon.spectrum[2], photon.spectrum[3]), 
+    vec4(photon.spectrum[4], photon.spectrum[5], photon.spectrum[6], photon.spectrum[7])),
+    0); //0.0, 0.0, 0.0, 0.0);*/
     oRadiance = vec4(photon.radiance, float(photon.samples));
 }
 
@@ -307,13 +273,16 @@ void main() {
 #version 300 es
 precision mediump float;
 
+#define EPS 1e-5
+
 @SpectralPhoton
 
 uniform mat4 uMvpInverseMatrix;
 uniform vec2 uInverseResolution;
 uniform float uRandSeed;
 uniform float uBlur;
-uniform float uPhotonFreq;
+//uniform float uPhotonFreq;
+//uniform mat4 uSpectrum;
 
 in vec2 vPosition;
 
@@ -325,6 +294,7 @@ layout (location = 3) out vec4 oRadiance;
 @rand
 @unprojectRand
 @intersectCube
+@spectrumHelpers
 
 void main() {
     SpectralPhoton photon;
@@ -336,11 +306,17 @@ void main() {
     photon.position = from + tbounds.x * photon.direction;
     photon.transmittance = vec3(1);
     photon.radiance = vec3(1);
-    photon.frequency = uPhotonFreq;
+    photon.frequency = 0.0; //uPhotonFreq;
     photon.bounces = 0u;
     photon.samples = 0u;
+    /*photon.spectrum = float[8](uSpectrum[0][0], uSpectrum[0][1], uSpectrum[0][2], uSpectrum[0][3],
+                                uSpectrum[1][0], uSpectrum[1][1], uSpectrum[1][2], uSpectrum[1][3]);*/
     oPosition = vec4(photon.position, 0);
     oDirection = vec4(photon.direction, float(photon.bounces));
     oTransmittance = vec4(photon.transmittance, 0);
+    //oTransmittance = vec4(spectrumToRgb(photon.spectrum), 0.0);
+    /*vec4(photon.spectrum[0], photon.spectrum[1], photon.spectrum[2], photon.spectrum[3]), 
+    vec4(photon.spectrum[4], photon.spectrum[5], photon.spectrum[6], photon.spectrum[7]),
+    0));*/
     oRadiance = vec4(photon.radiance, float(photon.samples));
 }

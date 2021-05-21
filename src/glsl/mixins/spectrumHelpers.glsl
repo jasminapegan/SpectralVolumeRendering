@@ -3,12 +3,10 @@
 // #section spectrumHelpers
 
 
-const float[] spectrumWeights = float[8](2.7, 3.3, 2.6, 2.5, 2.3, 2.1, 2.0, 1.75);
-const int len = 8;
-
+const uint len = 16u;
 
 vec3 frequencyToRGB(float freq) {
-    float Wavelength = 299792458.0 / freq;
+    float Wavelength = pow(10.0, 9.0) * 299792458.0 / freq;
     float Gamma = 0.80;
     float IntensityMax = 255.0;
     float factor;
@@ -63,10 +61,9 @@ vec3 frequencyToRGB(float freq) {
     return vec3(r, g, b);
 }
 
-vec3 spectrumToRgb(float spectrum[len]) { //vec4 spec1, vec4 spec2){ //
-    //float[8] spectrum = float[8](spec1.x, spec1.y, spec1.z, spec1.w, spec2.x, spec2.y, spec2.z, spec2.w);
+vec3 spectrumToRgb(float spectrum[len]) {
     vec3 rgb = vec3(0.0, 0.0, 0.0);
-    for (uint i=0u; i<8u; i++) {
+    for (uint i=0u; i<len; i++) {
         rgb += frequencyToRGB(spectrum[i]);
     }
     return rgb;
@@ -82,27 +79,6 @@ vec3 rgbToHsv(vec3 c)
     return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + EPS)), d / (q.x + EPS), q.x);
 }
 
-
-/*float sampleFrequency(vec2 randState) {
-
-    float sum = 0.0;
-    for (int i=0; i < len; i++) {
-        sum += spectrumWeights[i];
-    }
-    float[] cumulativeSpectrum = float[len](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    cumulativeSpectrum[0] = spectrumWeights[0] / sum;
-    for (int i=1; i < len; i++) {
-        cumulativeSpectrum[i] = (cumulativeSpectrum[i-1] + spectrumWeights[i]) / sum;
-    }
-
-    float u = rand(randState)[0]; //random iz [0,1]? preveri ce je res
-    int i = 0;
-    while (cumulativeSpectrum[i] > u) {
-        i++;
-    }
-    return 4.0 + float(4 * i) / float(len); // return actual freq between 4 and 7.5
-}*/
-
 uint rgbToSpectrumIndex(vec3 rgb) {
     float hue = rgbToHsv(rgb)[0];
     float wavelength = 620.0 - 170.0 / 270.0 * hue;
@@ -111,4 +87,24 @@ uint rgbToSpectrumIndex(vec3 rgb) {
     // (freq - 4) * len = 4 * i
     // i = (freq - 4) * len/4
     return uint((freq - 4.0) * float(len) / 4.0);
+}
+
+
+vec3 limitFreq(float freq, vec3 color) {
+    vec3 freqColor = frequencyToRGB(freq);
+    return vec3(min(freqColor.x, color.x), min(freqColor.y, color.y), min(freqColor.z, color.z));
+}
+
+
+vec3 cropColor(vec3 color, vec3 filterColor, float coef) {
+    vec3 ratio = vec3(
+        max(0.0, color.x - filterColor.x) / color.x,
+        max(0.0, color.y - filterColor.y) / color.y,
+        max(0.0, color.z - filterColor.z) / color.z
+    );
+    return vec3(
+        color.x * coef * ratio.x,
+        color.y * coef * ratio.y,
+        color.z * coef * ratio.z
+    );
 }

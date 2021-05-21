@@ -4,21 +4,18 @@
 // #include AbstractRenderer.js
 // #include ../utils/SpectralUtils.js
 
-class SpectralRenderer extends AbstractRenderer {
+class SpectralRendererCopy extends AbstractRenderer {
 
 constructor(gl, volume, environmentTexture, options) {
     super(gl, volume, environmentTexture, options);
 
     Object.assign(this, {
-        absorptionCoefficient : 3,
+        absorptionCoefficient : 1,
         scatteringCoefficient : 1,
         scatteringBias        : 0,
         majorant              : 2,
         maxBounces            : 8,
-        steps                 : 8,
-        n                     : 16,
-        temperature           : 5000,
-        cumulativeSpectrumSum : SpectralUtils.cumulativeSpectrum(16, 400 * Math.pow(10, -9), 700 * Math.pow(10, -9), 5000)
+        steps                 : 1
     }, options);
 
     this._programs = WebGL.buildPrograms(gl, {
@@ -48,9 +45,9 @@ _resetFrame() {
     gl.uniform2f(program.uniforms.uInverseResolution, 1 / this._bufferSize, 1 / this._bufferSize);
     gl.uniform1f(program.uniforms.uRandSeed, Math.random());
     gl.uniform1f(program.uniforms.uBlur, 0);
-    var freqIdx = SpectralUtils.sampleFrequency(this.temperature, this.cumulativeSpectrumSum[0], this.cumulativeSpectrumSum[1]);
-    gl.uniform1f(program.uniforms.uPhotonFreq, freqIdx[0]);
-    gl.uniform1ui(program.uniforms.uIdx, freqIdx[1]);
+    //gl.uniform1f(program.uniforms.uPhotonFreq, SpectralUtils.sampleFrequency());
+    //gl.uniformMatrix4fv(program.uniforms.uSpectrum, false, [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], 
+    //                                                        [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]);
 
     gl.drawBuffers([
         gl.COLOR_ATTACHMENT0,
@@ -63,9 +60,6 @@ _resetFrame() {
 }
 
 _generateFrame() {
-    if (this.temperature != 5000){
-        this.cumulativeSpectrumSum = SpectralUtils.cumulativeSpectrum(16, 400 * Math.pow(10, -9), 700 * Math.pow(10, -9), this.temperature);
-    }
 }
 
 _integrateFrame() {
@@ -113,10 +107,11 @@ _integrateFrame() {
     gl.uniform1f(program.uniforms.uMajorant, this.majorant);
     gl.uniform1ui(program.uniforms.uMaxBounces, this.maxBounces);
     gl.uniform1ui(program.uniforms.uSteps, this.steps);
-    var freqIdx = SpectralUtils.sampleFrequency(this.temperature, this.cumulativeSpectrumSum[0], this.cumulativeSpectrumSum[1]);
-    gl.uniform1f(program.uniforms.uPhotonFreq, freqIdx[0]);
-    gl.uniform1ui(program.uniforms.uIdx, freqIdx[1]);
-    
+    //gl.uniform1f(program.uniforms.uPhotonFreq, SpectralUtils.sampleFrequency());
+    //gl.uniformMatrix4fv(program.uniforms.uSpectrum, false, [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], 
+    //                                                       [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]);
+
+
     gl.drawBuffers([
         gl.COLOR_ATTACHMENT0,
         gl.COLOR_ATTACHMENT1,
